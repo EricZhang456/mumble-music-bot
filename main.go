@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/EricZhang456/mumble-music-bot/bot"
@@ -43,9 +44,13 @@ func main() {
 		log.Fatal("Failed to scan audio files: ", err)
 	}
 
-	botUsername := os.Getenv("MUMBLE_USER")
-	botCommand := os.Getenv("NOWPLAYING_COMMAND")
-	botPassword := os.Getenv("MUMBLE_PASSWORD")
+	botUsername := strings.TrimSpace(os.Getenv("MUMBLE_USER"))
+	botCommand := strings.TrimSpace(os.Getenv("NOWPLAYING_COMMAND"))
+	botPassword := strings.TrimSpace(os.Getenv("MUMBLE_PASSWORD"))
+
+	if botUsername == "" || botCommand == "" {
+		log.Fatal("Bot username and command cannot be empty.")
+	}
 
 	options := []bot.MumbleOptions{}
 	if botPassword != "" {
