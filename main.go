@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/EricZhang456/mumble-music-bot/bot"
 	"github.com/EricZhang456/mumble-music-bot/media"
@@ -74,9 +73,6 @@ func main() {
 		mb.JoinChannel(mumbleChannel)
 	}
 
-	time.Sleep(5 * time.Second)
-	mb.JoinChannel(mumbleChannel)
-
 	player := bot.CreateMusicPlayer(mb)
 	endpoint := bot.CreateMusicPlayerEndpoint(player, db)
 
@@ -89,6 +85,7 @@ func main() {
 	http.HandleFunc("POST /mode", endpoint.SetPlaybackModeHandler)
 	http.HandleFunc("POST /start", endpoint.StartPlaylistHandler)
 	http.HandleFunc("POST /stop", endpoint.StopPlaylistHandler)
+	http.HandleFunc("POST /clear", endpoint.ClearPlaylistHandler)
 
 	endpointPortStr := os.Getenv("CONTROLLER_ENDPOINT_PORT")
 	var endpointPort int

@@ -74,7 +74,7 @@ func (bot *MumbleBot) onTextMessage(e *gumble.TextMessageEvent) {
 	if ch == nil {
 		return
 	}
-	if strings.TrimSpace(e.Message) != bot.command {
+	if !strings.EqualFold(strings.TrimSpace(e.Message), bot.command) {
 		return
 	}
 	if bot.currentAudioData == nil {

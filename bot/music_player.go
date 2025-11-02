@@ -22,6 +22,7 @@ type MusicPlayer struct {
 	mode         PlaybackMode
 	currentIndex int
 	mu           sync.Mutex
+	stopped      bool
 }
 
 func CreateMusicPlayer(bot *MumbleBot) *MusicPlayer {
@@ -37,7 +38,6 @@ func (mp *MusicPlayer) AddToPlaylist(track media.AudioData) {
 }
 
 func (mp *MusicPlayer) AddAllToPlaylist(tracks []media.AudioData) {
-	utils.ReverseList(tracks)
 	for _, track := range tracks {
 		mp.AddToPlaylist(track)
 	}
@@ -47,9 +47,15 @@ func (mp *MusicPlayer) SetMode(mode PlaybackMode) {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
 	mp.mode = mode
-	if mode == Shuffle {
+	if mode == Shuffle || mode == ShuffleRepeat {
+		currentTrack := mp.playlist[mp.currentIndex]
 		utils.ShuffleList(mp.playlist)
-		mp.currentIndex = 0
+		for i, track := range mp.playlist {
+			if track == currentTrack {
+				mp.currentIndex = i
+				break
+			}
+		}
 	}
 }
 
@@ -61,6 +67,7 @@ func (mp *MusicPlayer) StartPlaylist() {
 		return
 	}
 
+	mp.stopped = false
 	if mp.currentIndex >= len(mp.playlist) {
 		switch mp.mode {
 		case ShuffleRepeat:
@@ -80,31 +87,39 @@ func (mp *MusicPlayer) StartPlaylist() {
 }
 
 func (mp *MusicPlayer) playNext() {
+	mp.mu.Lock()
 	if mp.currentIndex >= len(mp.playlist) {
+		mp.mu.Unlock()
+		mp.StartPlaylist()
 		return
 	}
 	track := mp.playlist[mp.currentIndex]
+	mp.mu.Unlock()
 
 	mp.bot.PlayAudio(track, func() {
 		mp.mu.Lock()
-		defer mp.mu.Unlock()
-
-		mp.currentIndex++
-
-		if mp.mode == Single || mp.mode == Shuffle {
-			if mp.currentIndex >= len(mp.playlist) {
-				return
-			}
+		if mp.stopped {
+			mp.mu.Unlock()
+			return
 		}
+		mp.currentIndex++
+		mp.mu.Unlock()
 
-		mp.playNext()
+		mp.StartPlaylist()
 	})
 }
 
 func (mp *MusicPlayer) StopPlaylist() {
 	mp.mu.Lock()
-	mp.playlist = nil
 	mp.currentIndex = 0
-	mp.mu.Unlock()
+	mp.stopped = true
 	mp.bot.StopAudio()
+	mp.mu.Unlock()
+}
+
+func (mp *MusicPlayer) ClearPlaylist() {
+	mp.StopPlaylist()
+	mp.mu.Lock()
+	mp.playlist = nil
+	mp.mu.Unlock()
 }

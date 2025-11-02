@@ -32,6 +32,16 @@ type MusicPlayerEndpoint struct {
 	db *gorm.DB
 }
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+func writeJsonError(w http.ResponseWriter, message string, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(ErrorResponse{Error: message})
+}
+
 func CreateMusicPlayerEndpoint(mp *MusicPlayer, db *gorm.DB) *MusicPlayerEndpoint {
 	musicPlayerEndpoint := &MusicPlayerEndpoint{mp: mp, db: db}
 	return musicPlayerEndpoint
@@ -40,7 +50,7 @@ func CreateMusicPlayerEndpoint(mp *MusicPlayer, db *gorm.DB) *MusicPlayerEndpoin
 func (e *MusicPlayerEndpoint) GetAllAudioDataHandler(w http.ResponseWriter, r *http.Request) {
 	var audioData []media.AudioData
 	if err := e.db.Find(&audioData).Error; err != nil {
-		http.Error(w, "Audio query failed: "+err.Error(), http.StatusInternalServerError)
+		writeJsonError(w, "Audio query failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	response := make([]MusicData, 0, len(audioData))
@@ -57,7 +67,7 @@ func (e *MusicPlayerEndpoint) GetAllAudioDataHandler(w http.ResponseWriter, r *h
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Cannot encode response: "+err.Error(), http.StatusInternalServerError)
+		writeJsonError(w, "Cannot encode response: "+err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -73,12 +83,12 @@ func (e *MusicPlayerEndpoint) AddSingleTrackHandler(w http.ResponseWriter, r *ht
 	trackStr := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("trackid")))
 	trackInt, err := strconv.Atoi(trackStr)
 	if err != nil {
-		http.Error(w, "Track id is not a number.", http.StatusBadRequest)
+		writeJsonError(w, "Track id is not a number.", http.StatusBadRequest)
 		return
 	}
 	track, err := e.getTrackById(uint(trackInt))
 	if err != nil {
-		http.Error(w, "Invalid track id.", http.StatusBadRequest)
+		writeJsonError(w, "Invalid track id.", http.StatusBadRequest)
 		return
 	}
 	e.mp.AddToPlaylist(*track)
@@ -88,19 +98,20 @@ func (e *MusicPlayerEndpoint) AddSingleTrackHandler(w http.ResponseWriter, r *ht
 func (e *MusicPlayerEndpoint) AddAllTracksHandler(w http.ResponseWriter, r *http.Request) {
 	var req AddAllRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON body.", http.StatusBadRequest)
+		writeJsonError(w, "Invalid JSON body.", http.StatusBadRequest)
 		return
 	}
 
-	tracks := make([]media.AudioData, 0, len(req.Ids))
-	for _, i := range req.Ids {
-		track, err := e.getTrackById(i)
-		if err != nil {
-			http.Error(w, "Invalid track id.", http.StatusBadRequest)
-			return
-		}
-		tracks = append(tracks, *track)
+	var tracks []media.AudioData
+	if err := e.db.Find(&tracks, req.Ids).Error; err != nil {
+		writeJsonError(w, "Database query failed: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	if len(tracks) != len(req.Ids) {
+		writeJsonError(w, "One or more track ids were invalid.", http.StatusBadRequest)
+		return
+	}
+
 	e.mp.AddAllToPlaylist(tracks)
 	w.WriteHeader(http.StatusOK)
 }
@@ -136,7 +147,7 @@ func (e *MusicPlayerEndpoint) GetPlaybackModeHandler(w http.ResponseWriter, r *h
 	}
 	response := ModeResponse{Mode: modeStr}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
+		writeJsonError(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -154,22 +165,31 @@ func (e *MusicPlayerEndpoint) GetPlaylistHandler(w http.ResponseWriter, r *http.
 		})
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
+		writeJsonError(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 func (e *MusicPlayerEndpoint) GetNowPlayingHandler(w http.ResponseWriter, r *http.Request) {
+	e.mp.mu.Lock()
+	current := e.mp.bot.currentAudioData
+	e.mp.mu.Unlock()
+	if current == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(nil)
+		return
+	}
 	response := MusicData{
-		Id:       e.mp.bot.currentAudioData.ID,
-		Title:    e.mp.bot.currentAudioData.Title,
-		Artists:  e.mp.bot.currentAudioData.Artists,
-		Album:    e.mp.bot.currentAudioData.Album,
-		TrackNum: e.mp.bot.currentAudioData.TrackNum,
-		DiscNum:  e.mp.bot.currentAudioData.DiscNum,
+		Id:       current.ID,
+		Title:    current.Title,
+		Artists:  current.Artists,
+		Album:    current.Album,
+		TrackNum: current.TrackNum,
+		DiscNum:  current.DiscNum,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
+		writeJsonError(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -181,5 +201,10 @@ func (e *MusicPlayerEndpoint) StartPlaylistHandler(w http.ResponseWriter, r *htt
 
 func (e *MusicPlayerEndpoint) StopPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 	e.mp.StopPlaylist()
+	w.WriteHeader(http.StatusOK)
+}
+
+func (e *MusicPlayerEndpoint) ClearPlaylistHandler(w http.ResponseWriter, r *http.Request) {
+	e.mp.ClearPlaylist()
 	w.WriteHeader(http.StatusOK)
 }
