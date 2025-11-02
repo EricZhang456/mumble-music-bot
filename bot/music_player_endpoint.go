@@ -10,16 +10,21 @@ import (
 	"gorm.io/gorm"
 )
 
-type MusicQueryResponse struct {
+type MusicData struct {
 	Id       uint    `json:"id"`
 	Title    string  `json:"title"`
 	Artists  *string `json:"artists,omitempty"`
 	Album    *string `json:"album,omitempty"`
 	TrackNum *int    `json:"track_num,omitempty"`
+	DiscNum  *int    `json:"disc_num,omitempty"`
 }
 
 type AddAllRequest struct {
 	Ids []uint `json:"ids"`
+}
+
+type ModeResponse struct {
+	Mode string `json:"mode"`
 }
 
 type MusicPlayerEndpoint struct {
@@ -38,14 +43,15 @@ func (e *MusicPlayerEndpoint) GetAllAudioDataHandler(w http.ResponseWriter, r *h
 		http.Error(w, "Audio query failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response := make([]MusicQueryResponse, 0, len(audioData))
+	response := make([]MusicData, 0, len(audioData))
 	for _, t := range audioData {
-		response = append(response, MusicQueryResponse{
+		response = append(response, MusicData{
 			Id:       t.ID,
 			Title:    t.Title,
 			Artists:  t.Artists,
 			Album:    t.Album,
 			TrackNum: t.TrackNum,
+			DiscNum:  t.DiscNum,
 		})
 	}
 
@@ -114,6 +120,58 @@ func (e *MusicPlayerEndpoint) SetPlaybackModeHandler(w http.ResponseWriter, r *h
 	}
 	e.mp.SetMode(mode)
 	w.WriteHeader(http.StatusOK)
+}
+
+func (e *MusicPlayerEndpoint) GetPlaybackModeHandler(w http.ResponseWriter, r *http.Request) {
+	var modeStr string
+	switch e.mp.mode {
+	case Single:
+		modeStr = "single"
+	case Repeat:
+		modeStr = "repeat"
+	case Shuffle:
+		modeStr = "shuffle"
+	case ShuffleRepeat:
+		modeStr = "shufflerepeat"
+	}
+	response := ModeResponse{Mode: modeStr}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (e *MusicPlayerEndpoint) GetPlaylistHandler(w http.ResponseWriter, r *http.Request) {
+	response := make([]MusicData, 0, len(e.mp.playlist))
+	for _, i := range e.mp.playlist {
+		response = append(response, MusicData{
+			Id:       i.ID,
+			Title:    i.Title,
+			Artists:  i.Artists,
+			Album:    i.Album,
+			TrackNum: i.TrackNum,
+			DiscNum:  i.DiscNum,
+		})
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (e *MusicPlayerEndpoint) GetNowPlayingHandler(w http.ResponseWriter, r *http.Request) {
+	response := MusicData{
+		Id:       e.mp.bot.currentAudioData.ID,
+		Title:    e.mp.bot.currentAudioData.Title,
+		Artists:  e.mp.bot.currentAudioData.Artists,
+		Album:    e.mp.bot.currentAudioData.Album,
+		TrackNum: e.mp.bot.currentAudioData.TrackNum,
+		DiscNum:  e.mp.bot.currentAudioData.DiscNum,
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Error encoding JSON: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (e *MusicPlayerEndpoint) StartPlaylistHandler(w http.ResponseWriter, r *http.Request) {

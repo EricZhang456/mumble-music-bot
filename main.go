@@ -81,9 +81,12 @@ func main() {
 	endpoint := bot.CreateMusicPlayerEndpoint(player, db)
 
 	http.HandleFunc("GET /tracks", endpoint.GetAllAudioDataHandler)
+	http.HandleFunc("GET /playlist", endpoint.GetPlaylistHandler)
+	http.HandleFunc("GET /mode", endpoint.GetPlaybackModeHandler)
+	http.HandleFunc("GET /nowplaying", endpoint.GetNowPlayingHandler)
 	http.HandleFunc("POST /add_single", endpoint.AddSingleTrackHandler)
 	http.HandleFunc("POST /add_all", endpoint.AddAllTracksHandler)
-	http.HandleFunc("POST /set_mode", endpoint.SetPlaybackModeHandler)
+	http.HandleFunc("POST /mode", endpoint.SetPlaybackModeHandler)
 	http.HandleFunc("POST /start", endpoint.StartPlaylistHandler)
 	http.HandleFunc("POST /stop", endpoint.StopPlaylistHandler)
 
