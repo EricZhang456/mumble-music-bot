@@ -43,8 +43,10 @@ func getAllAudioFiles(path string) ([]string, error) {
 
 func hasMetadataChanged(existing, scanned AudioData) bool {
 	return existing.Title != scanned.Title ||
-		!utils.EqualStrPtr(existing.Artists, scanned.Artists) ||
-		!utils.EqualStrPtr(existing.Album, scanned.Album)
+		!utils.EqualPtr(existing.Artists, scanned.Artists) ||
+		!utils.EqualPtr(existing.Album, scanned.Album) ||
+		!utils.EqualPtr(existing.TrackNum, scanned.TrackNum) ||
+		!utils.EqualPtr(existing.DiscNum, scanned.DiscNum)
 }
 
 func getMetadata(path string) (*AudioData, error) {

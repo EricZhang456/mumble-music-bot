@@ -1,6 +1,6 @@
 package utils
 
-func EqualStrPtr(a, b *string) bool {
+func EqualPtr[T comparable](a, b *T) bool {
 	if a == nil && b == nil {
 		return true
 	}
