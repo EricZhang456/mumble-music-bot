@@ -67,6 +67,7 @@ func main() {
 		mumblePort = 64738
 	}
 
+	log.Println("Joining Mumble server.")
 	mb.Connect(mumbleServer, mumblePort)
 	mumbleChannel := os.Getenv("MUMBLE_CHANNEL")
 	if mumbleChannel != "" {
@@ -97,7 +98,7 @@ func main() {
 	} else {
 		endpointPort = 8080
 	}
-	log.Println("Serving on :" + strconv.Itoa(endpointPort))
+	log.Println("Serving controller on :" + strconv.Itoa(endpointPort))
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(endpointPort), nil))
 
 	sig := make(chan os.Signal, 1)

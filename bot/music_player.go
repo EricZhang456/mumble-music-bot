@@ -26,6 +26,7 @@ type MusicPlayer struct {
 
 func CreateMusicPlayer(bot *MumbleBot) *MusicPlayer {
 	musicPlayer := &MusicPlayer{bot: bot}
+	musicPlayer.SetMode(Single)
 	return musicPlayer
 }
 
@@ -74,12 +75,20 @@ func (mp *MusicPlayer) StartPlaylist() {
 		}
 	}
 
-	track := mp.playlist[mp.currentIndex]
 	mp.mu.Unlock()
+	go mp.playNext()
+}
+
+func (mp *MusicPlayer) playNext() {
+	if mp.currentIndex >= len(mp.playlist) {
+		return
+	}
+	track := mp.playlist[mp.currentIndex]
 
 	mp.bot.PlayAudio(track, func() {
 		mp.mu.Lock()
 		defer mp.mu.Unlock()
+
 		mp.currentIndex++
 
 		if mp.mode == Single || mp.mode == Shuffle {
@@ -88,7 +97,7 @@ func (mp *MusicPlayer) StartPlaylist() {
 			}
 		}
 
-		mp.StartPlaylist()
+		mp.playNext()
 	})
 }
 
