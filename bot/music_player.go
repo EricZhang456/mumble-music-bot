@@ -54,6 +54,9 @@ func (mp *MusicPlayer) SetMode(mode PlaybackMode) {
 	defer mp.mu.Unlock()
 	mp.mode = mode
 	if mode == Shuffle || mode == ShuffleRepeat {
+		if len(mp.playlist) == 0 {
+			return
+		}
 		currentTrack := mp.playlist[mp.currentIndex]
 		utils.ShuffleList(mp.playlist)
 		for i, track := range mp.playlist {
