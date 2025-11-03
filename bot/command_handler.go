@@ -69,7 +69,7 @@ func (com *MusicPlayerCommandHandler) HandleCommand(commandRaw string) *string {
 	if err != nil {
 		return nil
 	}
-	verb := commandParts[0]
+	verb := strings.ToLower(commandParts[0])
 	args := commandParts[1:]
 	// i hate this
 	switch verb {
