@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.3'
+
+      - name: Build
+        run: go build -o out/
+
+      - name: Set output OS target name (Windows)
+        if: runner.os == 'Windows'
+        run: echo "OS_NAME=windows_x86_64" >> "$GITHUB_ENV"
+
+      - name: Set output OS target name (Linux)
+        if: runner.os == 'Linux'
+        run: echo "OS_NAME=linux_x86_64" >> "$GITHUB_ENV"
+
+      - name: Set output OS target name (macOS)
+        if: runner.os == 'macOS'
+        run: echo "OS_NAME=macos_x86_64" >> "$GITHUB_ENV"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ env.OS_NAME }}
+          path: out/
