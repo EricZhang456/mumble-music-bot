@@ -24,6 +24,10 @@ jobs:
       - name: Build
         run: go build -o out/
 
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install opus
+
       - name: Set output OS target name (Windows)
         if: runner.os == 'Windows'
         run: echo "OS_NAME=windows_x86_64" >> "$GITHUB_ENV"
