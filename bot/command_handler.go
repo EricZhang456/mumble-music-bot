@@ -132,12 +132,17 @@ func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
 			return "Not a valid page number."
 		}
 	}
+	if pageNum <= 0 || pageNum > len(com.allTrackPages) {
+		return "Page number out of range."
+	}
 	ret := fmt.Sprintf("<br><b>Showing page %d of %d</b>:<br>", pageNum, len(com.allTrackPages))
 	page := com.allTrackPages[pageNum-1]
 	for _, i := range page {
 		ret += fmt.Sprintf("<b>%d:</b> %s<br>", i.ID, i.ToString())
 	}
-	ret += fmt.Sprintf("<br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1)
+	if pageNum != len(com.allTrackPages) {
+		ret += fmt.Sprintf("<br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1)
+	}
 	return ret
 }
 
