@@ -43,6 +43,12 @@ func (mp *MusicPlayer) AddAllToPlaylist(tracks []media.AudioData) {
 	}
 }
 
+func (mp *MusicPlayer) GetMode() PlaybackMode {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+	return mp.mode
+}
+
 func (mp *MusicPlayer) SetMode(mode PlaybackMode) {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
@@ -122,4 +128,19 @@ func (mp *MusicPlayer) ClearPlaylist() {
 	mp.mu.Lock()
 	mp.playlist = nil
 	mp.mu.Unlock()
+}
+
+func PlaybackModeToString(mode PlaybackMode) string {
+	switch mode {
+	case Single:
+		return "Single"
+	case Shuffle:
+		return "Shuffle"
+	case Repeat:
+		return "Repeat"
+	case ShuffleRepeat:
+		return "ShuffleRepeat"
+	default:
+		return ""
+	}
 }

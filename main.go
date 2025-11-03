@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -45,11 +44,11 @@ func main() {
 	}
 
 	botUsername := strings.TrimSpace(os.Getenv("MUMBLE_USER"))
-	botCommand := strings.TrimSpace(os.Getenv("NOWPLAYING_COMMAND"))
+	botCommandPrefix := strings.TrimSpace(os.Getenv("COMMAND_PREFIX"))
 	botPassword := strings.TrimSpace(os.Getenv("MUMBLE_PASSWORD"))
 
-	if botUsername == "" || botCommand == "" {
-		log.Fatal("Bot username and command cannot be empty.")
+	if botUsername == "" || botCommandPrefix == "" {
+		log.Fatal("Bot username and command prefix cannot be empty.")
 	}
 
 	options := []bot.MumbleOptions{}
@@ -57,7 +56,7 @@ func main() {
 		options = append(options, bot.WithPassword(botPassword))
 	}
 
-	mb := bot.CreateMumbleBot(botUsername, botCommand, options...)
+	mb := bot.CreateMumbleBot(botUsername, options...)
 	mumbleServer := os.Getenv("MUMBLE_SERVER")
 	mumblePortEnv := os.Getenv("MUMBLE_PORT")
 	var mumblePort int
@@ -79,32 +78,8 @@ func main() {
 	}
 
 	player := bot.CreateMusicPlayer(mb)
-	endpoint := bot.CreateMusicPlayerEndpoint(player, db)
-
-	http.HandleFunc("GET /tracks", endpoint.GetAllAudioDataHandler)
-	http.HandleFunc("GET /playlist", endpoint.GetPlaylistHandler)
-	http.HandleFunc("GET /mode", endpoint.GetPlaybackModeHandler)
-	http.HandleFunc("GET /nowplaying", endpoint.GetNowPlayingHandler)
-	http.HandleFunc("POST /add_single", endpoint.AddSingleTrackHandler)
-	http.HandleFunc("POST /add_all", endpoint.AddAllTracksHandler)
-	http.HandleFunc("POST /mode", endpoint.SetPlaybackModeHandler)
-	http.HandleFunc("POST /start", endpoint.StartPlaylistHandler)
-	http.HandleFunc("POST /stop", endpoint.StopPlaylistHandler)
-	http.HandleFunc("POST /clear", endpoint.ClearPlaylistHandler)
-
-	endpointPortStr := os.Getenv("CONTROLLER_ENDPOINT_PORT")
-	var endpointPort int
-	if endpointPortStr != "" {
-		var err error
-		endpointPort, err = strconv.Atoi(endpointPortStr)
-		if err != nil {
-			log.Fatal("CONTROLLER_ENDPOINT_PORT is not a valid port.")
-		}
-	} else {
-		endpointPort = 8080
-	}
-	log.Println("Serving controller on :" + strconv.Itoa(endpointPort))
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(endpointPort), nil))
+	commandHandler := bot.CreateCommandHandler(botCommandPrefix, player, db)
+	mb.SetCommandHandler(commandHandler)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)

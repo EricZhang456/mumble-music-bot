@@ -3,7 +3,6 @@ package bot
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/EricZhang456/mumble-music-bot/media"
@@ -14,11 +13,11 @@ import (
 )
 
 type MumbleBot struct {
-	command          string
 	client           *gumble.Client
 	config           *gumble.Config
 	currentAudioData *media.AudioData
 	currentStream    *gumbleffmpeg.Stream
+	commandHandler   CommandHandler
 	mu               sync.Mutex
 }
 
@@ -36,13 +35,13 @@ func WithTokens(tokens []string) MumbleOptions {
 	}
 }
 
-func CreateMumbleBot(username string, command string, opts ...MumbleOptions) *MumbleBot {
+func CreateMumbleBot(username string, opts ...MumbleOptions) *MumbleBot {
 	cfg := gumble.NewConfig()
 	cfg.Username = username
 	for _, opt := range opts {
 		opt(cfg)
 	}
-	bot := &MumbleBot{config: cfg, command: command}
+	bot := &MumbleBot{config: cfg}
 	cfg.Attach(gumbleutil.Listener{
 		TextMessage: bot.onTextMessage,
 	})
@@ -66,6 +65,12 @@ func (bot *MumbleBot) JoinChannel(channel string) {
 	bot.client.Self.Move(ch)
 }
 
+func (bot *MumbleBot) SetCommandHandler(commandHandler CommandHandler) {
+	bot.mu.Lock()
+	defer bot.mu.Unlock()
+	bot.commandHandler = commandHandler
+}
+
 func (bot *MumbleBot) onTextMessage(e *gumble.TextMessageEvent) {
 	if e.Sender == nil {
 		return
@@ -74,21 +79,13 @@ func (bot *MumbleBot) onTextMessage(e *gumble.TextMessageEvent) {
 	if ch == nil {
 		return
 	}
-	if !strings.EqualFold(strings.TrimSpace(e.Message), bot.command) {
-		return
+	if bot.commandHandler == nil {
+		ch.Send("No command handler has been registered yet.", false)
 	}
-	if bot.currentAudioData == nil {
-		ch.Send("Not playing anything right now.", false)
-		return
+	message := bot.commandHandler.HandleCommand(e.Message)
+	if message != nil {
+		ch.Send(*message, false)
 	}
-	nowPlaying := bot.currentAudioData.Title
-	if bot.currentAudioData.Artists != nil && len(strings.TrimSpace(*bot.currentAudioData.Artists)) > 0 {
-		nowPlaying = *bot.currentAudioData.Artists + " - " + nowPlaying
-	}
-	if bot.currentAudioData.Album != nil && len(strings.TrimSpace(*bot.currentAudioData.Album)) > 0 {
-		nowPlaying += " (from " + *bot.currentAudioData.Album + ")"
-	}
-	ch.Send("<b>Now playing:</b> "+nowPlaying, false)
 }
 
 func (bot *MumbleBot) PlayAudio(data *media.AudioData, onComplete func()) {
