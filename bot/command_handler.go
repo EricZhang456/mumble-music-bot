@@ -127,7 +127,7 @@ func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
 	for _, i := range page {
 		ret += fmt.Sprintf("<b>%d:</b> %s<br>", i.ID, i.ToString())
 	}
-	ret += fmt.Sprintf("Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1)
+	ret += fmt.Sprintf("<br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1)
 	return ret
 }
 
