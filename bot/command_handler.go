@@ -96,7 +96,8 @@ func (com *MusicPlayerCommandHandler) HandleCommand(commandRaw string) *string {
 func (com *MusicPlayerCommandHandler) replyHelp() string {
 	ret := "<b>Available Commands:</b><br>"
 	ret += fmt.Sprintf("<b>%shelp:</b> Show this help message.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%stracks <i>&lt;page number&gt;</i>:</b> Show available tracks.<br>", com.commandPrefix)
+	ret += fmt.Sprintf("<b>%stracks <i>&lt;page number&gt;</i>:</b> Show available tracks. "+
+		"Invoke with no arguments to show the first page.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%sadd <i>&lt;track id&gt;</i>:</b> Add a track to playlist by its track ID.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%saddalbum <i>&lt;album name&gt;</i>:</b> Add an entire album to playlist.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%smode <i>&lt;playback mode&gt;</i>:</b> Set playback mode. "+
