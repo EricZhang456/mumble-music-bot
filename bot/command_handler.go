@@ -25,12 +25,16 @@ type MusicPlayerCommandHandler struct {
 	db            *gorm.DB
 	commandPrefix string
 	allTrackPages [][]media.AudioData
+	allAlbums     []string
 }
 
 func CreateCommandHandler(commandPrefix string, mp *MusicPlayer, db *gorm.DB) *MusicPlayerCommandHandler {
 	commandHandler := &MusicPlayerCommandHandler{mp: mp, db: db, commandPrefix: commandPrefix}
 	if err := commandHandler.populatePages(5); err != nil {
 		log.Fatal("Cannot populate pages for command handler.")
+	}
+	if err := commandHandler.populateAlbums(); err != nil {
+		log.Fatal("Cannot fetch albums from DB.")
 	}
 	return commandHandler
 }
@@ -46,6 +50,15 @@ func (com *MusicPlayerCommandHandler) populatePages(pageSize int) error {
 		end := min(i+pageSize, len(allAudioData))
 		com.allTrackPages = append(com.allTrackPages, allAudioData[i:end])
 	}
+	return nil
+}
+
+func (com *MusicPlayerCommandHandler) populateAlbums() error {
+	var albums []string
+	if err := com.db.Model(&media.AudioData{}).Distinct("album").Where("album IS NOT NULL").Pluck("album", &albums).Error; err != nil {
+		return err
+	}
+	com.allAlbums = albums
 	return nil
 }
 
@@ -195,17 +208,13 @@ func (com *MusicPlayerCommandHandler) addAlbum(args []string) string {
 	if len(args) == 0 {
 		return "Album name needed."
 	}
-	var albums []string
-	if err := com.db.Model(&media.AudioData{}).Distinct("album").Where("album IS NOT NULL").Pluck("album", &albums).Error; err != nil {
-		return "Error when searching for albums."
-	}
-	if len(albums) == 0 {
+	if len(com.allAlbums) == 0 {
 		return "No albums are in DB somehow."
 	}
 
 	bestAlbum := ""
 	bestDistance := math.MaxInt
-	for _, a := range albums {
+	for _, a := range com.allAlbums {
 		dist := utils.Levenshtein(strings.ToLower(args[0]), strings.ToLower(a))
 		if dist < bestDistance {
 			bestDistance = dist
