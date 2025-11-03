@@ -102,7 +102,7 @@ func (com *MusicPlayerCommandHandler) HandleCommand(commandRaw string) *string {
 
 // i don't like this either
 func (com *MusicPlayerCommandHandler) replyHelp() string {
-	ret := "<b>Available Commands:</b><br>"
+	ret := "<br><b>Available Commands:</b><br>"
 	ret += fmt.Sprintf("<b>%shelp:</b> Show this help message.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%stracks <i>&lt;page number&gt;</i>:</b> Show available tracks. "+
 		"Invoke with no arguments to show the first page.<br>", com.commandPrefix)
@@ -155,7 +155,7 @@ func (com *MusicPlayerCommandHandler) replyNowPlaying() string {
 func (com *MusicPlayerCommandHandler) replyPlaylist() string {
 	com.mp.mu.Lock()
 	defer com.mp.mu.Unlock()
-	ret := "<b>Current playlist:</b><br>"
+	ret := "<br><b>Current playlist:</b><br>"
 	for index, i := range com.mp.playlist {
 		ret += fmt.Sprintf("<b>%d:</b> %s", index+1, i.ToString())
 		if index != len(com.mp.playlist)-1 {
