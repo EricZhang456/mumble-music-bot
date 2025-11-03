@@ -116,7 +116,7 @@ func (com *MusicPlayerCommandHandler) replyHelp() string {
 	ret += fmt.Sprintf("<b>%snowplaying:</b> Show what's playing right now.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%splaylist:</b> Show the current playlist.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%sstart:</b> Start playback.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%sstop:</b> Stop playback.<br>", com.commandPrefix)
+	ret += fmt.Sprintf("<b>%sstop:</b> Stop playback and rewind to first track in playlist.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%sclear:</b> Stop playback and clear playlist.", com.commandPrefix)
 	return ret
 }
