@@ -16,6 +16,14 @@ const (
 	Repeat
 )
 
+type RemoveResult int
+
+const (
+	Success RemoveResult = iota
+	Playing
+	OutOfRange
+)
+
 type MusicPlayer struct {
 	bot          *MumbleBot
 	playlist     []*media.AudioData
@@ -28,6 +36,7 @@ type MusicPlayer struct {
 func CreateMusicPlayer(bot *MumbleBot) *MusicPlayer {
 	musicPlayer := &MusicPlayer{bot: bot}
 	musicPlayer.SetMode(Single)
+	musicPlayer.stopped = true
 	return musicPlayer
 }
 
@@ -93,6 +102,48 @@ func (mp *MusicPlayer) StartPlaylist() {
 
 	mp.mu.Unlock()
 	go mp.playNext()
+}
+
+func (mp *MusicPlayer) Skip() bool {
+	mp.mu.Lock()
+	if mp.stopped {
+		mp.mu.Unlock()
+		return false
+	}
+
+	mp.mu.Unlock()
+	mp.bot.StopAudio()
+
+	return true
+}
+
+func (mp *MusicPlayer) RemoveFromPlaylist(index int) (*media.AudioData, RemoveResult) {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+
+	if index < 0 || index >= len(mp.playlist) {
+		return nil, OutOfRange
+	}
+
+	if index == mp.currentIndex && !mp.stopped {
+		return nil, Playing
+	}
+
+	ret := mp.playlist[index]
+
+	if index < mp.currentIndex {
+		mp.currentIndex--
+	}
+
+	mp.playlist = utils.RemoveByIndex(mp.playlist, index)
+
+	if len(mp.playlist) == 0 {
+		mp.currentIndex = 0
+		mp.stopped = true
+	} else if mp.currentIndex >= len(mp.playlist) {
+		mp.currentIndex = len(mp.playlist) - 1
+	}
+	return ret, Success
 }
 
 func (mp *MusicPlayer) playNext() {

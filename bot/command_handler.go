@@ -1,3 +1,5 @@
+// FIXME: Locking and unlocking mutex is not fun
+
 package bot
 
 import (
@@ -73,6 +75,12 @@ func (com *MusicPlayerCommandHandler) HandleCommand(commandRaw string) *string {
 	case "mode":
 		result := com.setOrGetMode(args)
 		return &result
+	case "remove":
+		result := com.removeFromPlaylist(args)
+		return &result
+	case "skip":
+		result := com.skipTrack()
+		return &result
 	case "playlist":
 		result := com.replyPlaylist()
 		return &result
@@ -103,6 +111,8 @@ func (com *MusicPlayerCommandHandler) replyHelp() string {
 	ret += fmt.Sprintf("<b>%smode <i>&lt;playback mode&gt;</i>:</b> Set playback mode. "+
 		"Invoke with no arguments to see current plaback mode. "+
 		"Available values are: &quot;single&quot;, &quot;shuffle&quot;, &quot;repeat&quot;, &quot;shufflerepeat&quot;.<br>", com.commandPrefix)
+	ret += fmt.Sprintf("<b>%sremove <i>&lt;index&gt;</i>:</b> Remove a track from playlist by its index in the playlist.<br>", com.commandPrefix)
+	ret += fmt.Sprintf("<b>%sskip:</b> Skip the current track.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%snowplaying:</b> Show what's playing right now.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%splaylist:</b> Show the current playlist.<br>", com.commandPrefix)
 	ret += fmt.Sprintf("<b>%sstart:</b> Start playback.<br>", com.commandPrefix)
@@ -143,6 +153,8 @@ func (com *MusicPlayerCommandHandler) replyNowPlaying() string {
 }
 
 func (com *MusicPlayerCommandHandler) replyPlaylist() string {
+	com.mp.mu.Lock()
+	defer com.mp.mu.Unlock()
 	ret := "<b>Current playlist:</b><br>"
 	for index, i := range com.mp.playlist {
 		ret += fmt.Sprintf("<b>%d:</b> %s", index+1, i.ToString())
@@ -174,7 +186,6 @@ func (com *MusicPlayerCommandHandler) addTrack(args []string) string {
 	return "<b>Adding track:</b> " + track.ToString()
 }
 
-// FIXME: Doesn't search properly
 func (com *MusicPlayerCommandHandler) addAlbum(args []string) string {
 	if len(args) == 0 {
 		return "Album name needed."
@@ -239,17 +250,73 @@ func (com *MusicPlayerCommandHandler) setOrGetMode(args []string) string {
 	return "<b>Changed playback mode to:</b> " + PlaybackModeToString(mode)
 }
 
+func (com *MusicPlayerCommandHandler) removeFromPlaylist(args []string) string {
+	com.mp.mu.Lock()
+	if len(com.mp.playlist) == 0 {
+		com.mp.mu.Unlock()
+		return "Playlist is empty."
+	}
+	com.mp.mu.Unlock()
+	playlistIndex, err := strconv.Atoi(args[0])
+	if err != nil {
+		return "Invalid index."
+	}
+	playlistIndex--
+
+	removedTrack, result := com.mp.RemoveFromPlaylist(playlistIndex)
+	switch result {
+	case Success:
+		return fmt.Sprintf("Removed track <b>%d: %s</b> from playlist.", playlistIndex+1, removedTrack.Title)
+	case Playing:
+		return "You can't remove the track that's currently playing."
+	case OutOfRange:
+		return "Invalid index."
+	}
+	return ""
+}
+
+func (com *MusicPlayerCommandHandler) skipTrack() string {
+	com.mp.mu.Lock()
+	if len(com.mp.playlist) == 0 {
+		com.mp.mu.Unlock()
+		return "Playlist is empty."
+	}
+	com.mp.mu.Unlock()
+	if com.mp.Skip() {
+		return "Skipping track."
+	}
+	return "Not playing anything right now."
+}
+
 func (com *MusicPlayerCommandHandler) startPlaylist() string {
+	com.mp.mu.Lock()
+	if len(com.mp.playlist) == 0 {
+		com.mp.mu.Unlock()
+		return "Playlist is empty."
+	}
+	com.mp.mu.Unlock()
 	com.mp.StartPlaylist()
 	return "Starting playback."
 }
 
 func (com *MusicPlayerCommandHandler) stopPlaylist() string {
+	com.mp.mu.Lock()
+	if len(com.mp.playlist) == 0 {
+		com.mp.mu.Unlock()
+		return "Playlist is empty."
+	}
+	com.mp.mu.Unlock()
 	com.mp.StopPlaylist()
 	return "Stopping playback."
 }
 
 func (com *MusicPlayerCommandHandler) clearPlaylist() string {
+	com.mp.mu.Lock()
+	if len(com.mp.playlist) == 0 {
+		com.mp.mu.Unlock()
+		return "Playlist is empty."
+	}
+	com.mp.mu.Unlock()
 	com.mp.ClearPlaylist()
 	return "Stopping playback and clearing playlist."
 }
