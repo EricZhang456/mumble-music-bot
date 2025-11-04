@@ -171,10 +171,17 @@ func (com *MusicPlayerCommandHandler) replyNowPlaying() string {
 }
 
 func (com *MusicPlayerCommandHandler) replyPlaylist() string {
+	nowPlaying := com.mp.GetCurrentTrack()
 	playlist := com.mp.GetPlaylist()
+	if len(playlist) == 0 {
+		return "Playlist is empty."
+	}
 	ret := "<br><b>Current playlist:</b><br>"
 	for index, i := range playlist {
 		ret += fmt.Sprintf("<b>%d:</b> %s", index+1, i.ToString())
+		if i == nowPlaying {
+			ret += " <i>(Now playing)</i>"
+		}
 		if index != len(com.mp.playlist)-1 {
 			ret += "<br>"
 		}
