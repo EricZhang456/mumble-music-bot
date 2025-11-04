@@ -23,8 +23,10 @@ type CommandHandler interface {
 type MusicPlayerCommandHandler struct {
 	mp            *MusicPlayer
 	db            *gorm.DB
+	pageSize      int
 	commandPrefix string
 	allTrackPages [][]media.AudioData
+	allTracks     []media.AudioData
 	allAlbums     []string
 }
 
@@ -40,15 +42,17 @@ func CreateCommandHandler(commandPrefix string, mp *MusicPlayer, db *gorm.DB) *M
 }
 
 func (com *MusicPlayerCommandHandler) populatePages(pageSize int) error {
-	var allAudioData []media.AudioData
-	if err := com.db.Find(&allAudioData).Error; err != nil {
+	if err := com.db.Find(&com.allTracks).Error; err != nil {
 		return err
 	}
-	numPages := int(math.Ceil(float64(len(allAudioData)) / float64(pageSize)))
+
+	numPages := int(math.Ceil(float64(len(com.allTracks)) / float64(pageSize)))
+	com.pageSize = pageSize
 	com.allTrackPages = make([][]media.AudioData, 0, numPages)
-	for i := 0; i < len(allAudioData); i += pageSize {
-		end := min(i+pageSize, len(allAudioData))
-		com.allTrackPages = append(com.allTrackPages, allAudioData[i:end])
+
+	for i := 0; i < len(com.allTracks); i += pageSize {
+		end := min(i+pageSize, len(com.allTracks))
+		com.allTrackPages = append(com.allTrackPages, com.allTracks[i:end])
 	}
 	return nil
 }
@@ -150,8 +154,9 @@ func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
 	}
 	ret := fmt.Sprintf("<br><b>Showing page %d of %d</b>:<br>", pageNum, len(com.allTrackPages))
 	page := com.allTrackPages[pageNum-1]
-	for _, i := range page {
-		ret += fmt.Sprintf("<b>%d:</b> %s<br>", i.ID, i.ToString())
+	startIndex := (pageNum - 1) * com.pageSize
+	for index, i := range page {
+		ret += fmt.Sprintf("<b>%d:</b> %s<br>", startIndex+index+1, i.ToString())
 	}
 	if pageNum != len(com.allTrackPages) {
 		ret += fmt.Sprintf("<br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1)
@@ -183,24 +188,13 @@ func (com *MusicPlayerCommandHandler) replyPlaylist() string {
 	return ret
 }
 
-func (com *MusicPlayerCommandHandler) getTrackById(id uint) (*media.AudioData, error) {
-	var track media.AudioData
-	if err := com.db.First(&track, id).Error; err != nil {
-		return nil, err
-	}
-	return &track, nil
-}
-
 func (com *MusicPlayerCommandHandler) addTrack(args []string) string {
 	trackId, err := strconv.Atoi(args[0])
-	if err != nil {
+	if err != nil || trackId <= 0 || trackId > len(com.allTracks) {
 		return "Invalid track ID."
 	}
-	track, err := com.getTrackById(uint(trackId))
-	if err != nil {
-		return "Invalid track ID."
-	}
-	com.mp.AddToPlaylist(*track)
+	track := com.allTracks[trackId-1]
+	com.mp.AddToPlaylist(track)
 	return "<b>Adding track:</b> " + track.ToString()
 }
 
