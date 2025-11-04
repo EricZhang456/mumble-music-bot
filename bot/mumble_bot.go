@@ -116,6 +116,12 @@ func (bot *MumbleBot) PlayAudio(data *media.AudioData, onComplete func()) {
 	}()
 }
 
+func (bot *MumbleBot) GetCurrentAudioData() *media.AudioData {
+	bot.mu.Lock()
+	defer bot.mu.Unlock()
+	return bot.currentAudioData
+}
+
 func (bot *MumbleBot) StopAudio() {
 	bot.mu.Lock()
 	if bot.currentStream != nil {

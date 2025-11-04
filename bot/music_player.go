@@ -169,6 +169,21 @@ func (mp *MusicPlayer) playNext() {
 	})
 }
 
+func (mp *MusicPlayer) GetCurrentTrack() *media.AudioData {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+	if mp.stopped || len(mp.playlist) == 0 {
+		return nil
+	}
+	return mp.playlist[mp.currentIndex]
+}
+
+func (mp *MusicPlayer) GetPlaylist() []*media.AudioData {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+	return mp.playlist
+}
+
 func (mp *MusicPlayer) StopPlaylist() {
 	mp.mu.Lock()
 	mp.currentIndex = 0

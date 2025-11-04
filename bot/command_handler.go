@@ -1,5 +1,3 @@
-// FIXME: Locking and unlocking mutex is not fun
-
 package bot
 
 import (
@@ -165,10 +163,7 @@ func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
 }
 
 func (com *MusicPlayerCommandHandler) replyNowPlaying() string {
-	// ehh whatever
-	com.mp.mu.Lock()
-	current := com.mp.bot.currentAudioData
-	com.mp.mu.Unlock()
+	current := com.mp.GetCurrentTrack()
 	if current == nil {
 		return "Not playing anything right now."
 	}
@@ -176,10 +171,9 @@ func (com *MusicPlayerCommandHandler) replyNowPlaying() string {
 }
 
 func (com *MusicPlayerCommandHandler) replyPlaylist() string {
-	com.mp.mu.Lock()
-	defer com.mp.mu.Unlock()
+	playlist := com.mp.GetPlaylist()
 	ret := "<br><b>Current playlist:</b><br>"
-	for index, i := range com.mp.playlist {
+	for index, i := range playlist {
 		ret += fmt.Sprintf("<b>%d:</b> %s", index+1, i.ToString())
 		if index != len(com.mp.playlist)-1 {
 			ret += "<br>"
@@ -259,12 +253,9 @@ func (com *MusicPlayerCommandHandler) setOrGetMode(args []string) string {
 }
 
 func (com *MusicPlayerCommandHandler) removeFromPlaylist(args []string) string {
-	com.mp.mu.Lock()
-	if len(com.mp.playlist) == 0 {
-		com.mp.mu.Unlock()
+	if len(com.mp.GetPlaylist()) == 0 {
 		return "Playlist is empty."
 	}
-	com.mp.mu.Unlock()
 	playlistIndex, err := strconv.Atoi(args[0])
 	if err != nil {
 		return "Invalid index."
@@ -284,12 +275,9 @@ func (com *MusicPlayerCommandHandler) removeFromPlaylist(args []string) string {
 }
 
 func (com *MusicPlayerCommandHandler) skipTrack() string {
-	com.mp.mu.Lock()
-	if len(com.mp.playlist) == 0 {
-		com.mp.mu.Unlock()
+	if len(com.mp.GetPlaylist()) == 0 {
 		return "Playlist is empty."
 	}
-	com.mp.mu.Unlock()
 	if com.mp.Skip() {
 		return "Skipping track."
 	}
@@ -297,34 +285,25 @@ func (com *MusicPlayerCommandHandler) skipTrack() string {
 }
 
 func (com *MusicPlayerCommandHandler) startPlaylist() string {
-	com.mp.mu.Lock()
-	if len(com.mp.playlist) == 0 {
-		com.mp.mu.Unlock()
+	if len(com.mp.GetPlaylist()) == 0 {
 		return "Playlist is empty."
 	}
-	com.mp.mu.Unlock()
 	com.mp.StartPlaylist()
 	return "Starting playback."
 }
 
 func (com *MusicPlayerCommandHandler) stopPlaylist() string {
-	com.mp.mu.Lock()
-	if len(com.mp.playlist) == 0 {
-		com.mp.mu.Unlock()
+	if len(com.mp.GetPlaylist()) == 0 {
 		return "Playlist is empty."
 	}
-	com.mp.mu.Unlock()
 	com.mp.StopPlaylist()
 	return "Stopping playback."
 }
 
 func (com *MusicPlayerCommandHandler) clearPlaylist() string {
-	com.mp.mu.Lock()
-	if len(com.mp.playlist) == 0 {
-		com.mp.mu.Unlock()
+	if len(com.mp.GetPlaylist()) == 0 {
 		return "Playlist is empty."
 	}
-	com.mp.mu.Unlock()
 	com.mp.ClearPlaylist()
 	return "Stopping playback and clearing playlist."
 }
