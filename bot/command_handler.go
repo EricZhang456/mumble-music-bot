@@ -137,10 +137,10 @@ func (com *MusicPlayerCommandHandler) replyHelp() string {
 }
 
 func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
-	var pageNum int
-	if len(com.allTrackPages) == 0 {
+	if len(com.allTracks) == 0 {
 		return "No tracks available."
 	}
+	var pageNum int
 	if len(args) == 0 {
 		pageNum = 1
 	} else {
