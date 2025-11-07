@@ -138,6 +138,9 @@ func (com *MusicPlayerCommandHandler) replyHelp() string {
 
 func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
 	var pageNum int
+	if len(com.allTrackPages) == 0 {
+		return "No tracks available."
+	}
 	if len(args) == 0 {
 		pageNum = 1
 	} else {
