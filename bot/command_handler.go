@@ -117,23 +117,24 @@ func (com *MusicPlayerCommandHandler) HandleCommand(commandRaw string) *string {
 
 // i don't like this either
 func (com *MusicPlayerCommandHandler) replyHelp() string {
-	ret := "<br><b>Available Commands:</b><br>"
-	ret += fmt.Sprintf("<b>%shelp:</b> Show this help message.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%stracks <i>&lt;page number&gt;</i>:</b> Show available tracks. "+
-		"Invoke with no arguments to show the first page.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%sadd <i>&lt;track id&gt;</i>:</b> Add a track to playlist by its track ID.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%saddalbum <i>&lt;album name&gt;</i>:</b> Add an entire album to playlist.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%smode <i>&lt;playback mode&gt;</i>:</b> Set playback mode. "+
+	var sb strings.Builder
+	sb.WriteString("<br><b>Available Commands:</b><br>")
+	sb.WriteString(fmt.Sprintf("<b>%shelp:</b> Show this help message.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%stracks <i>&lt;page number&gt;</i>:</b> Show available tracks. "+
+		"Invoke with no arguments to show the first page.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%sadd <i>&lt;track id&gt;</i>:</b> Add a track to playlist by its track ID.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%saddalbum <i>&lt;album name&gt;</i>:</b> Add an entire album to playlist.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%smode <i>&lt;playback mode&gt;</i>:</b> Set playback mode. "+
 		"Invoke with no arguments to see current plaback mode. "+
-		"Available values are: &quot;single&quot;, &quot;shuffle&quot;, &quot;repeat&quot;, &quot;shufflerepeat&quot;.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%sremove <i>&lt;index&gt;</i>:</b> Remove a track from playlist by its index in the playlist.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%sskip:</b> Skip the current track.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%snowplaying:</b> Show what's playing right now.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%splaylist:</b> Show the current playlist.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%sstart:</b> Start playback.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%sstop:</b> Stop playback and rewind to the first track in playlist.<br>", com.commandPrefix)
-	ret += fmt.Sprintf("<b>%sclear:</b> Stop playback and clear playlist.", com.commandPrefix)
-	return ret
+		"Available values are: &quot;single&quot;, &quot;shuffle&quot;, &quot;repeat&quot;, &quot;shufflerepeat&quot;.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%sremove <i>&lt;index&gt;</i>:</b> Remove a track from playlist by its index in the playlist.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%sskip:</b> Skip the current track.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%snowplaying:</b> Show what's playing right now.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%splaylist:</b> Show the current playlist.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%sstart:</b> Start playback.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%sstop:</b> Stop playback and rewind to the first track in playlist.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%sclear:</b> Stop playback and clear playlist.", com.commandPrefix))
+	return sb.String()
 }
 
 func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
@@ -153,16 +154,17 @@ func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
 	if pageNum <= 0 || pageNum > len(com.allTrackPages) {
 		return "Page number out of range."
 	}
-	ret := fmt.Sprintf("<br><b>Showing page %d of %d</b>:<br>", pageNum, len(com.allTrackPages))
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("<br><b>Showing page %d of %d</b>:<br>", pageNum, len(com.allTrackPages)))
 	page := com.allTrackPages[pageNum-1]
 	startIndex := (pageNum - 1) * com.pageSize
 	for index, i := range page {
-		ret += fmt.Sprintf("<b>%d:</b> %s<br>", startIndex+index+1, i.ToString())
+		sb.WriteString(fmt.Sprintf("<b>%d:</b> %s<br>", startIndex+index+1, i.ToString()))
 	}
 	if pageNum != len(com.allTrackPages) {
-		ret += fmt.Sprintf("<br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1)
+		sb.WriteString(fmt.Sprintf("<br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1))
 	}
-	return ret
+	return sb.String()
 }
 
 func (com *MusicPlayerCommandHandler) replyNowPlaying() string {
@@ -179,17 +181,18 @@ func (com *MusicPlayerCommandHandler) replyPlaylist() string {
 	if len(playlist) == 0 {
 		return "Playlist is empty."
 	}
-	ret := "<br><b>Current playlist:</b><br>"
+	var sb strings.Builder
+	sb.WriteString("<br><b>Current playlist:</b><br>")
 	for index, i := range playlist {
-		ret += fmt.Sprintf("<b>%d:</b> %s", index+1, i.ToString())
+		sb.WriteString(fmt.Sprintf("<b>%d:</b> %s", index+1, i.ToString()))
 		if i == nowPlaying {
-			ret += " <i>(Now playing)</i>"
+			sb.WriteString(" <i>(Now playing)</i>")
 		}
 		if index != len(com.mp.playlist)-1 {
-			ret += "<br>"
+			sb.WriteString("<br>")
 		}
 	}
-	return ret
+	return sb.String()
 }
 
 func (com *MusicPlayerCommandHandler) addTrack(args []string) string {

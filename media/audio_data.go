@@ -17,18 +17,24 @@ type AudioData struct {
 }
 
 func (ad AudioData) ToString() string {
-	ret := ad.Title
+	var sb strings.Builder
+	sb.WriteString(ad.Title)
 	if ad.Artists != nil {
 		artistsStrTrimmed := strings.TrimSpace(*ad.Artists)
 		if artistsStrTrimmed != "" {
-			ret = artistsStrTrimmed + " - " + ret
+			sb.Reset()
+			sb.WriteString(artistsStrTrimmed)
+			sb.WriteString(" - ")
+			sb.WriteString(ad.Title)
 		}
 	}
 	if ad.Album != nil {
 		albumStrTrimmed := strings.TrimSpace(*ad.Album)
 		if albumStrTrimmed != "" {
-			ret += " (from " + *ad.Album + ")"
+			sb.WriteString("(from ")
+			sb.WriteString(albumStrTrimmed)
+			sb.WriteString(")")
 		}
 	}
-	return ret
+	return sb.String()
 }
