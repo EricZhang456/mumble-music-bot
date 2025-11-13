@@ -162,11 +162,13 @@ func (com *MusicPlayerCommandHandler) getTracks(args []string) string {
 	sb.WriteString(fmt.Sprintf("<br><b>Showing page %d of %d</b>:<br>", pageNum, len(com.allTrackPages)))
 	page := com.allTrackPages[pageNum-1]
 	startIndex := (pageNum - 1) * com.pageSize
+	lines := make([]string, 0, len(page))
 	for index, i := range page {
-		sb.WriteString(fmt.Sprintf("<b>%d:</b> %s<br>", startIndex+index+1, i.ToString()))
+		lines = append(lines, fmt.Sprintf("<b>%d:</b> %s", startIndex+index+1, i.ToString()))
 	}
+	sb.WriteString(strings.Join(lines, "<br>"))
 	if pageNum != len(com.allTrackPages) {
-		sb.WriteString(fmt.Sprintf("<br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1))
+		sb.WriteString(fmt.Sprintf("<br><br>Type <b>%stracks %d</b> to see the next page.", com.commandPrefix, pageNum+1))
 	}
 	return sb.String()
 }
