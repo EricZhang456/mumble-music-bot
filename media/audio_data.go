@@ -31,7 +31,7 @@ func (ad AudioData) ToString() string {
 	if ad.Album != nil {
 		albumStrTrimmed := strings.TrimSpace(*ad.Album)
 		if albumStrTrimmed != "" {
-			sb.WriteString("(from ")
+			sb.WriteString(" (from ")
 			sb.WriteString(albumStrTrimmed)
 			sb.WriteString(")")
 		}

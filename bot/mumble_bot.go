@@ -1,7 +1,9 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 
@@ -19,6 +21,7 @@ type MumbleBot struct {
 	currentStream    *gumbleffmpeg.Stream
 	commandHandler   CommandHandler
 	mu               sync.Mutex
+	paused           bool
 }
 
 type MumbleOptions func(*gumble.Config)
@@ -42,6 +45,7 @@ func CreateMumbleBot(username string, opts ...MumbleOptions) *MumbleBot {
 		opt(cfg)
 	}
 	bot := &MumbleBot{config: cfg}
+	bot.paused = false
 	cfg.Attach(gumbleutil.Listener{
 		TextMessage: bot.onTextMessage,
 	})
@@ -102,7 +106,7 @@ func (bot *MumbleBot) PlayAudio(data *media.AudioData, onComplete func()) {
 	go func() {
 		err := stream.Play()
 		if err != nil {
-			fmt.Printf("Playback error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Playback error: %v\n", err)
 		}
 		stream.Wait()
 		bot.mu.Lock()
@@ -124,10 +128,38 @@ func (bot *MumbleBot) GetCurrentAudioData() *media.AudioData {
 
 func (bot *MumbleBot) StopAudio() {
 	bot.mu.Lock()
+	defer bot.mu.Unlock()
 	if bot.currentStream != nil {
 		bot.currentStream.Stop()
 		bot.currentStream = nil
 		bot.currentAudioData = nil
 	}
-	bot.mu.Unlock()
+}
+
+func (bot *MumbleBot) PauseStream() error {
+	bot.mu.Lock()
+	defer bot.mu.Unlock()
+	if bot.currentStream == nil {
+		return errors.New("Not playing anything.")
+	}
+	bot.currentStream.Pause()
+	bot.paused = true
+	return nil
+}
+
+func (bot *MumbleBot) UnpauseStream() error {
+	bot.mu.Lock()
+	defer bot.mu.Unlock()
+	if bot.paused && bot.currentStream != nil {
+		bot.currentStream.Play()
+		bot.paused = false
+		return nil
+	}
+	return errors.New("Not playing anything or stream is not paused.")
+}
+
+func (bot *MumbleBot) IsPaused() bool {
+	bot.mu.Lock()
+	defer bot.mu.Unlock()
+	return bot.paused
 }

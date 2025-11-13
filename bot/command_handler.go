@@ -111,6 +111,9 @@ func (com *MusicPlayerCommandHandler) HandleCommand(commandRaw string) *string {
 	case "clear":
 		result := com.clearPlaylist()
 		return &result
+	case "pause":
+		result := com.pauseToggle()
+		return &result
 	}
 	return nil
 }
@@ -133,6 +136,7 @@ func (com *MusicPlayerCommandHandler) replyHelp() string {
 	sb.WriteString(fmt.Sprintf("<b>%splaylist:</b> Show the current playlist.<br>", com.commandPrefix))
 	sb.WriteString(fmt.Sprintf("<b>%sstart:</b> Start playback.<br>", com.commandPrefix))
 	sb.WriteString(fmt.Sprintf("<b>%sstop:</b> Stop playback and rewind to the first track in playlist.<br>", com.commandPrefix))
+	sb.WriteString(fmt.Sprintf("<b>%spause:</b> Pause/Unpause playback.<br>", com.commandPrefix))
 	sb.WriteString(fmt.Sprintf("<b>%sclear:</b> Stop playback and clear playlist.", com.commandPrefix))
 	return sb.String()
 }
@@ -172,7 +176,13 @@ func (com *MusicPlayerCommandHandler) replyNowPlaying() string {
 	if current == nil {
 		return "Not playing anything right now."
 	}
-	return "<b>Now playing:</b> " + current.ToString()
+	var sb strings.Builder
+	sb.WriteString("<b>Now playing:</b> ")
+	sb.WriteString(current.ToString())
+	if com.mp.IsPaused() {
+		sb.WriteString(" <i>(Paused)</i>")
+	}
+	return sb.String()
 }
 
 func (com *MusicPlayerCommandHandler) replyPlaylist() string {
@@ -187,6 +197,9 @@ func (com *MusicPlayerCommandHandler) replyPlaylist() string {
 		sb.WriteString(fmt.Sprintf("<b>%d:</b> %s", index+1, i.ToString()))
 		if i == nowPlaying {
 			sb.WriteString(" <i>(Now playing)</i>")
+			if com.mp.IsPaused() {
+				sb.WriteString(" <i>(Paused)</i>")
+			}
 		}
 		if index != len(com.mp.playlist)-1 {
 			sb.WriteString("<br>")
@@ -291,7 +304,7 @@ func (com *MusicPlayerCommandHandler) skipTrack() string {
 	if len(com.mp.GetPlaylist()) == 0 {
 		return "Playlist is empty."
 	}
-	if com.mp.Skip() {
+	if err := com.mp.Skip(); err == nil {
 		return "Skipping track."
 	}
 	return "Not playing anything right now."
@@ -319,4 +332,17 @@ func (com *MusicPlayerCommandHandler) clearPlaylist() string {
 	}
 	com.mp.ClearPlaylist()
 	return "Stopping playback and clearing playlist."
+}
+
+func (com *MusicPlayerCommandHandler) pauseToggle() string {
+	if com.mp.GetCurrentTrack() == nil {
+		return "Playback is stopped."
+	}
+	paused := com.mp.IsPaused()
+	if !paused {
+		com.mp.Pause()
+		return "Pausing audio."
+	}
+	com.mp.Unpause()
+	return "Unpausing audio."
 }

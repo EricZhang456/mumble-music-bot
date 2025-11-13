@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/EricZhang456/mumble-music-bot/media"
@@ -104,17 +105,17 @@ func (mp *MusicPlayer) StartPlaylist() {
 	go mp.playNext()
 }
 
-func (mp *MusicPlayer) Skip() bool {
+func (mp *MusicPlayer) Skip() error {
 	mp.mu.Lock()
 	if mp.stopped {
 		mp.mu.Unlock()
-		return false
+		return errors.New("Not playing anything.")
 	}
 
 	mp.mu.Unlock()
 	mp.bot.StopAudio()
 
-	return true
+	return nil
 }
 
 func (mp *MusicPlayer) RemoveFromPlaylist(index int) (*media.AudioData, RemoveResult) {
@@ -181,15 +182,15 @@ func (mp *MusicPlayer) GetCurrentTrack() *media.AudioData {
 func (mp *MusicPlayer) GetPlaylist() []*media.AudioData {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
-	return mp.playlist
+	return append([]*media.AudioData(nil), mp.playlist...)
 }
 
 func (mp *MusicPlayer) StopPlaylist() {
 	mp.mu.Lock()
 	mp.currentIndex = 0
 	mp.stopped = true
-	mp.bot.StopAudio()
 	mp.mu.Unlock()
+	mp.bot.StopAudio()
 }
 
 func (mp *MusicPlayer) ClearPlaylist() {
@@ -197,6 +198,33 @@ func (mp *MusicPlayer) ClearPlaylist() {
 	mp.mu.Lock()
 	mp.playlist = nil
 	mp.mu.Unlock()
+}
+
+func (mp *MusicPlayer) Pause() error {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+	if mp.stopped {
+		return errors.New("Playback is stopped.")
+	}
+	return mp.bot.PauseStream()
+}
+
+func (mp *MusicPlayer) Unpause() error {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+	if mp.stopped {
+		return errors.New("Playback is stopped.")
+	}
+	return mp.bot.UnpauseStream()
+}
+
+func (mp *MusicPlayer) IsPaused() bool {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+	if mp.stopped {
+		return false
+	}
+	return mp.bot.IsPaused()
 }
 
 func PlaybackModeToString(mode PlaybackMode) string {
