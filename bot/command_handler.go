@@ -66,7 +66,11 @@ func (com *MusicPlayerCommandHandler) populateAlbums() error {
 
 func (com *MusicPlayerCommandHandler) HandleCommand(commandRaw string) *string {
 	commandRawUnescape := html.UnescapeString(commandRaw)
-	command := strings.TrimPrefix(strings.TrimSpace(commandRawUnescape), com.commandPrefix)
+	commandTrimmed := strings.TrimSpace(commandRawUnescape)
+	if !strings.HasPrefix(commandTrimmed, com.commandPrefix) {
+		return nil
+	}
+	command := strings.TrimPrefix(strings.TrimSpace(commandTrimmed), com.commandPrefix)
 	commandParts, err := shlex.Split(command)
 	if err != nil {
 		return nil
