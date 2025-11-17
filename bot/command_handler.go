@@ -316,6 +316,9 @@ func (com *MusicPlayerCommandHandler) startPlaylist() string {
 	if len(com.mp.GetPlaylist()) == 0 {
 		return "Playlist is empty."
 	}
+	if com.mp.IsPaused() {
+		return com.pauseToggle()
+	}
 	com.mp.StartPlaylist()
 	return "Starting playback."
 }
